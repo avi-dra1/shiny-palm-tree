@@ -121,6 +121,7 @@ const App = () => {
         setShowSubmit(false);
         console.log("Player Words", PlayerWords);
         sendLettersToGPT();
+        setTurnAnnounceModalVisible(true);
       }else if((timeLeft < 10) && (timeLeft > 0)) {
         setIsPlayerTurn(false);
         setShowSubmit(false);
