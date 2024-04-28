@@ -94,7 +94,8 @@ const App = () => {
 
   const [animationData, setAnimationData] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [winnerModalVisible, setWinnerModalVisible] = useState(false);
+  //const [winnerModalVisible, setWinnerModalVisible] = useState(false);
+  const [turnAnnounceModalVisible, setTurnAnnounceModalVisible] = useState(false);
 
   useEffect(() => {
     
@@ -157,6 +158,7 @@ const App = () => {
     setVerifiedGPTWords([]);
     setVerifiedGPTScores([]);
     setScoreComparisonModalVisible(false);
+    setTurnAnnounceModalVisible(true);
   } ;
 
   const fetchWords = async (verifyWords) => {
@@ -292,13 +294,13 @@ const App = () => {
             <View style={{ flex: 1, alignItems: 'center' }}>
               <Text style={styles.modalText}>Player Score: {score}</Text>
               {PlayerWords.map((word, index) => (
-                <Text key={index} style={styles.modalText}>{word}</Text>
+                <Text key={index} style={styles.wordCard}>{word}</Text>
               ))}
             </View>
             <View style={{ flex: 1, alignItems: 'center' }}>
               <Text style={styles.modalText}>GPT Score: {gptScore}</Text>
               {verifiedGPTWords.map((word, index) => (
-                <Text key={index} style={styles.modalText}>{word}</Text>
+                <Text key={index} style={styles.wordCard}>{word}</Text>
               ))}
             </View>
           </View>
@@ -308,6 +310,46 @@ const App = () => {
   );
 };
 
+const LetterTile = ({ letter, onPress }) => {
+  return (
+    <TouchableOpacity style={styles.letterTile} onPress={() => onPress(letter)}>
+      <Text style={styles.letterText}>{letter}</Text>
+    </TouchableOpacity>
+  );
+};
+
+const TurnAnnouncementModal = () => {
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setTurnAnnounceModalVisible(false);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, []); 
+
+  return (
+    <Modal
+    animationType="slide"
+    transparent={true}
+    visible={turnAnnounceModalVisible}
+    onRequestClose={() => setTurnAnnounceModalVisible(false)}
+  >
+    <View style={styles.centeredView}>
+      <View style={styles.modalView}>
+        <Text style={styles.modalText}>{isPlayerTurn ? 'Your Turn!' : 'GPT Turn'}</Text>
+      </View>
+    </View>
+  </Modal>
+);
+}
+
+// Modify your render method to include this component in a grid
+<View style={styles.lettersContainer}>
+  {letters.map((letter, index) => (
+    <LetterTile key={index} letter={letter} onPress={handlePressLetter} />
+  ))}
+</View>
+
 
   return (
     <ImageBackground
@@ -315,51 +357,33 @@ const App = () => {
       style={styles.container}
       resizeMode="cover"
     >
-    <ScoreComparisonModal/>
-    <View style={styles.container}>
-      <Modal
-      animationType="slide"
-      transparent={true}
-      visible={modalVisible}
-      onRequestClose={() => {
-        setModalVisible(!modalVisible);
-      }}
-    >
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <LottieView
-            source={animationData}
-            autoPlay
-            loop={false}
-            onAnimationFinish={() => {
-              setAnimationData(null);
-              setModalVisible(false); // Hide the modal when the animation is done
-            }}
-            style={styles.lottieFullScreenAnimation}
-          />
-        </View>
-      </View>
-    </Modal>    
-    <CentralAnimation />
+    <Text style={styles.timer}>{timeLeft}seconds</Text>
+    <TurnAnnouncementModal />
+    <View style={styles.gamePlayArea}>
       <Text style={styles.score}>Your Score: {score}</Text>
       <View style={styles.lettersContainer}>
         {letters.map((letter, index) => (
-          <TouchableOpacity key={index} style={styles.letterButton} onPress={() => handlePressLetter(letter)}>
-            <Image source={images[letter]} style={styles.letterImage} />
-          </TouchableOpacity>
+          <LetterTile key={index} letter={letter} onPress={handlePressLetter} />
         ))}
-      </View>
-      {isPlayerTurn && isValid != null && (
-       <Image source={isValid ? checkIcon : crossIcon} style={styles.validationIcon} />
-      )}
       {isPlayerTurn && showSubmit && (
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmitWord}>
           <Image source={sendIcon} style={styles.sendIcon} />
         </TouchableOpacity>
       )}
-      <Text style={styles.timer}>Time Left: {timeLeft}s</Text>
+      </View>
+      <ScoreComparisonModal/>
+      {!gameOver && (
+        <View style={styles.wordsDisplay}>
+        {PlayerWords.map((word, index) => (
+          <Text key={index} style={styles.wordCard}>{word}</Text>
+        ))}
+        </View>
+      )}
       {!isPlayerTurn && (
         <Text style={styles.score}>GPT Score: {gptScore}</Text>
+      )}
+      {isPlayerTurn && isValid != null && (
+       <Image source={isValid ? checkIcon : crossIcon} style={styles.validationIcon} />
       )}
       <View style={styles.wordCardContainer}>
         {serverWordResponse.map((word, index) => (
@@ -405,10 +429,32 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   lettersContainer: {
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    marginBottom: 20,
+    alignItems: 'center',
+  },
+  sendIcon: {
+    width: 75,
+    height: 75,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  letterTile: {
+    width: '25%',  // Adjust size based on your layout preference
+    aspectRatio: 1,  // Keeps tile square
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: 2,
+    backgroundColor: '#f0f0f0',  // Tile background color
+    borderRadius: 10,
+  },
+  letterText: {
+    fontSize: 22,
+    fontWeight: 'bold',
   },
   letterButton: {
     padding: 10,
@@ -423,7 +469,7 @@ const styles = StyleSheet.create({
     margin: 10,
   },
   submitButton: {
-    backgroundColor: '#ffffde',
+    backgroundColor: '#aff0fe',
     padding: 10,
     borderRadius: 5,
   },
@@ -437,8 +483,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   timer: {
-    fontSize: 20,
-    color: 'red',
+    fontSize: 40,
+    color: 'white',
     fontWeight: 'bold',
     margin: 10,
   },
@@ -453,7 +499,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   wordCard: {
-    backgroundColor: '#ffffde',
+    backgroundColor: '#f0f0f0',
     padding: 10,
     margin: 5,
     borderRadius: 5,
@@ -529,14 +575,21 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
   },
-  sendIcon: {
-    width: 50,
-    height: 50,
-  },
   modalText: {
     fontSize: 16,
     color: '#333',
     padding: 5,
+  },
+  wordsDisplay: {
+    flexDirection: 'row',  // Horizontal layout for words
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  gamePlayArea: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });
 
