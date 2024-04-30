@@ -384,7 +384,12 @@ const TurnAnnouncementModal = () => {
         <Text style={styles.score}>GPT Score: {gptScore}</Text>
       )}
       {isPlayerTurn && isValid != null && (
-       <Image source={isValid ? checkIcon : crossIcon} style={styles.validationIcon} />
+        <Icon
+        name={isValid ? "check" : "times"}
+        size={60}  // Adjust size as needed
+        color={isValid ? "green" : "red"}  // Adjust color as needed
+        style={styles.validationIcon}
+      />
       )}
       <View style={styles.wordCardContainer}>
         {serverWordResponse.map((word, index) => (
