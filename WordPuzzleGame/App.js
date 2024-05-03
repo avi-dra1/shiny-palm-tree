@@ -1,5 +1,7 @@
 // Code for the Word Puzzle Game
 import Constants from 'expo-constants';
+import WordCard from './WordCard'; // Adjust the path as necessary
+
 
 
 import React, { useState, useEffect } from 'react';
@@ -10,6 +12,7 @@ import LottieView from 'lottie-react-native';
 import aiWinsAnimation from './aiwins.json';
 import humanWinsAnimation from './humanwins.json';
 import sendIcon from './assets/send.png';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { Modal } from 'react-native';
 
@@ -232,6 +235,7 @@ const App = () => {
   };
 
   const handleSubmitWord = async () => {
+    if (currentWord.length > 1) {
     try {
       const response = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${currentWord.toLowerCase()}`);
       if (response.data && response.status === 200) {
@@ -244,6 +248,10 @@ const App = () => {
       setIsValid(false);
       //Alert.alert("Incorrect", "This is not a valid word.");
     }
+  } else {
+    setIsValid(false);
+    console.log("Word is too short");
+  }
     setTimeout(() => setIsValid(null), 2000);
     setCurrentWord('');
   };
@@ -368,18 +376,24 @@ const TurnAnnouncementModal = () => {
         ))}
       {isPlayerTurn && showSubmit && (
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmitWord}>
-          <Image source={sendIcon} style={styles.sendIcon} />
+         <Icon name="send" size={72} color="#FFFFFF" style={styles.sendIcon} />
         </TouchableOpacity>
       )}
       </View>
-      <ScoreComparisonModal/>
       {!gameOver && (
-        <View style={styles.wordsDisplay}>
-        {PlayerWords.map((word, index) => (
-          <Text key={index} style={styles.wordCard}>{word}</Text>
-        ))}
-        </View>
+      <View style={styles.gamePlayArea}>
+      {PlayerWords.map((word, index) => (
+        <WordCard
+          key={index}
+          word={word}
+          onFavoritePress={() => console.log('Favorite pressed')}
+          isFavorite={false}
+          iconType={0}
+        />
+      ))}
+      </View>
       )}
+      <ScoreComparisonModal/>
       {!isPlayerTurn && (
         <Text style={styles.score}>GPT Score: {gptScore}</Text>
       )}
@@ -393,9 +407,13 @@ const TurnAnnouncementModal = () => {
       )}
       <View style={styles.wordCardContainer}>
         {serverWordResponse.map((word, index) => (
-          <TouchableOpacity key={index} style={styles.wordCard} onPress={() => handleWordPress(word)}>
-            <Text style={styles.wordText}>{word}</Text>
-          </TouchableOpacity>
+          <WordCard
+          key={index}
+          word={word}
+          onFavoritePress={() => console.log('Favorite pressed')}
+          isFavorite={true}
+          iconType={1}
+        />
         ))}
       </View>
       {gameOver && !isPlayerTurn && (
@@ -505,10 +523,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   wordCard: {
-    backgroundColor: '#f0f0f0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 10,
     margin: 5,
-    borderRadius: 5,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
