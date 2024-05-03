@@ -35,6 +35,8 @@ def generate_word():
 
 #implement dictionary check
 def is_valid_word(word, available_letters):
+    if len(word) == 1:
+        return False
     url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
     response = requests.get(url)
     if not can_construct_word(word, available_letters):

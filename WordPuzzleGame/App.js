@@ -235,6 +235,7 @@ const App = () => {
   };
 
   const handleSubmitWord = async () => {
+    if (currentWord.length > 1) {
     try {
       const response = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${currentWord.toLowerCase()}`);
       if (response.data && response.status === 200) {
@@ -247,6 +248,10 @@ const App = () => {
       setIsValid(false);
       //Alert.alert("Incorrect", "This is not a valid word.");
     }
+  } else {
+    setIsValid(false);
+    console.log("Word is too short");
+  }
     setTimeout(() => setIsValid(null), 2000);
     setCurrentWord('');
   };
