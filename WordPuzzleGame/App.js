@@ -1,6 +1,7 @@
 // Code for the Word Puzzle Game
 import Constants from 'expo-constants';
 import WordCard from './WordCard'; // Adjust the path as necessary
+import FavoriteWordsModal from './FavoriteWordsModal';
 
 
 
@@ -55,6 +56,13 @@ const images = {
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 const App = () => {
+
+  const [isFavoritesModalVisible, setFavoritesModalVisible] = useState(false);
+
+  const toggleFavoritesModal = () => {
+    setFavoritesModalVisible(!isFavoritesModalVisible);
+  };
+
 
 
   const [savedWords, setSavedWords] = useState({});  // Tracks saved words
@@ -411,12 +419,13 @@ const TurnAnnouncementModal = () => {
           key={index}
           word={word}
           onFavoritePress={() => console.log('Favorite pressed')}
-          isFavorite={true}
+          isFavorite={false}
           iconType={1}
         />
         ))}
       </View>
-      {gameOver && !isPlayerTurn && (
+      
+    {gameOver && !isPlayerTurn && (
       <Text style={styles.result}>
       {winner} wins! {winner === 'GPT' ? 'Better luck next time!' : 'Congratulations!'} 
     </Text>
@@ -439,7 +448,17 @@ const TurnAnnouncementModal = () => {
     </View>
     </View>
     )}
+     <View style={styles.wordCardContainer}>
+      <TouchableOpacity style={styles.saveIcon} onPress={toggleFavoritesModal}>
+        <Icon name="star" size={60} color="#ffd700" />
+      </TouchableOpacity>
+      <FavoriteWordsModal
+        isVisible={isFavoritesModalVisible}
+        onClose={toggleFavoritesModal}
+      />
     </View>
+    </View>
+
     </ImageBackground>
   );
 };
@@ -617,6 +636,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  saveIcon: {
+    position: 'absolute',
+    top: -850,
+    right: -200,
   }
 });
 
