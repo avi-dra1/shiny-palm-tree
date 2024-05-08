@@ -109,6 +109,8 @@ const App = () => {
   const [turnAnnounceModalVisible, setTurnAnnounceModalVisible] = useState(false);
   const [validationComplete, setValidationComplete] = useState(false)
 
+  const [playerWordsChecked, setPlayerWordsChecked] = useState(false);
+
   useEffect(() => {
     
     //implement timer here
@@ -122,24 +124,37 @@ const App = () => {
   useEffect(() => {
     console.log("Updated All Words: ", allWords);
     fetchWords(allWords);
-  }, [allWords.length > 0]);
+  }, [allWords.length]);
   
   //implement turn based game logic
   useEffect(() => {
     if (timeLeft === 30) {
       generateRandomLetters();
-    }else if (timeLeft === 10) {
+    }},[timeLeft]);
+  
+  useEffect(() => {
+   if (timeLeft === 10) {
         setIsPlayerTurn(false);
         setShowSubmit(false);
         console.log("Player Words", PlayerWords);
         sendLettersToGPT();
         setTurnAnnounceModalVisible(true);
-      }else if((timeLeft < 10) && (timeLeft > 0)) {
-        setIsPlayerTurn(false);
-        setShowSubmit(false);
-        setGptScore(allWords.length);
-        //validateAllPlayerWords();
-      }} , [timeLeft]);
+      }}, [timeLeft]);
+
+  useEffect(() => {
+    if((timeLeft < 10) && (timeLeft > 0)) {
+      setIsPlayerTurn(false);
+      setShowSubmit(false);
+      setGptScore(allWords.length);
+      //validateAllPlayerWords();
+      if (!playerWordsChecked) {
+        validateAllPlayerWords().then(() => {
+          console.log("Validation complete");
+          // This will now wait until validation (and thus scoring) is complete
+          setValidationComplete(true)
+        });
+      }
+    }}, [timeLeft]);
 
       useEffect(() => {
         if (timeLeft === 0) {
@@ -147,17 +162,14 @@ const App = () => {
           console.log("GPT Score", gptScore);
           console.log("Verified GPT Words", verifiedGPTWords);
           console.log("Verified GPT Score", verifiedGPTScores);
-      
-          validateAllPlayerWords().then(() => {
-            console.log("Validation complete");
-            // This will now wait until validation (and thus scoring) is complete
-            setValidationComplete(true)
-          });
+          setWinner(gptScore > score ? 'GPT' : 'Player');
+          setScoreComparisonModalVisible(true);
+          setTimeout(resetGame, 5000);
         }
       }, [timeLeft]);
       
       // Separate useEffect to handle end-of-game logic once all updates are processed
-      useEffect(() => {
+      /*useEffect(() => {
         if (gameOver && validationComplete) {
           // Now check the updated scores and determine the winner
           setWinner(gptScore > score ? 'GPT' : 'Player');
@@ -165,16 +177,7 @@ const App = () => {
           setTimeout(resetGame, 5000);
         }
       }, [gameOver, validationComplete, gptScore]); // Depend on score and gptScore to ensure they are updated
-
-
-  // You can call validateAllPlayerWords at the end of the game or player's turn
-  /*useEffect(() => {
-  if (gameOver || !isPlayerTurn) {
-    validateAllPlayerWords();
-  }
-  }, [gameOver, isPlayerTurn]);
-*/
-
+      */
 
   const resetGame = () => {
     // Reset the game state
@@ -194,7 +197,10 @@ const App = () => {
     setVerifiedGPTScores([]);
     setScoreComparisonModalVisible(false);
     setTurnAnnounceModalVisible(true);
-    setValidationComplete(false)
+    setValidationComplete(false);
+    setPlayerWordsChecked(false);
+    //reset the ref
+    currentWordRef.current = '';
   } ;
 
   const fetchWords = async (verifyWords) => {
@@ -295,13 +301,16 @@ const App = () => {
     );
 
    // Process the validation results here, e.g., update scores, show alerts, etc.
+  let newScore = 0;
   results.forEach(result => {
     if (result.isValid) {
-      setScore(prevScore => prevScore + 1); // Increment score if the word is valid
+      newScore += 1; // Increment score if the word is valid
     } else {
       console.log(`${result.word} is not a valid word.`);
     }
   });
+  setScore(prevScore => prevScore + newScore);
+  setPlayerWordsChecked(true);
 };
 
   const handleWordPress = (word) => {
