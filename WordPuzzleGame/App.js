@@ -5,7 +5,7 @@ import FavoriteWordsModal from './FavoriteWordsModal';
 
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image, Alert, Dimensions, ImageBackground } from 'react-native';
 import axios, { all } from 'axios';
 import LottieView from 'lottie-react-native';
@@ -63,7 +63,7 @@ const App = () => {
     setFavoritesModalVisible(!isFavoritesModalVisible);
   };
 
-
+  const currentWordRef = useRef('')
 
   const [savedWords, setSavedWords] = useState({});  // Tracks saved words
 
@@ -107,6 +107,7 @@ const App = () => {
   const [modalVisible, setModalVisible] = useState(false);
   //const [winnerModalVisible, setWinnerModalVisible] = useState(false);
   const [turnAnnounceModalVisible, setTurnAnnounceModalVisible] = useState(false);
+  const [validationComplete, setValidationComplete] = useState(false)
 
   useEffect(() => {
     
@@ -137,20 +138,42 @@ const App = () => {
         setIsPlayerTurn(false);
         setShowSubmit(false);
         setGptScore(allWords.length);
+        //validateAllPlayerWords();
       }} , [timeLeft]);
 
-  useEffect (() => {
-    if (timeLeft === 0) {
-      //fetchWords(allWords);
-      setGameOver(true);
-      console.log("GPT Score", gptScore);
-      console.log("Verified GPT Words", verifiedGPTWords);
-      console.log("Verified GPT Score", verifiedGPTScores);
-      setWinner(gptScore > score ? 'GPT' : 'Player');
-      setScoreComparisonModalVisible(true);
-      setTimeout(resetGame, 5000);
-    }} , [timeLeft]);
+      useEffect(() => {
+        if (timeLeft === 0) {
+          setGameOver(true);
+          console.log("GPT Score", gptScore);
+          console.log("Verified GPT Words", verifiedGPTWords);
+          console.log("Verified GPT Score", verifiedGPTScores);
+      
+          validateAllPlayerWords().then(() => {
+            console.log("Validation complete");
+            // This will now wait until validation (and thus scoring) is complete
+            setValidationComplete(true)
+          });
+        }
+      }, [timeLeft]);
+      
+      // Separate useEffect to handle end-of-game logic once all updates are processed
+      useEffect(() => {
+        if (gameOver && validationComplete) {
+          // Now check the updated scores and determine the winner
+          setWinner(gptScore > score ? 'GPT' : 'Player');
+          setScoreComparisonModalVisible(true);
+          setTimeout(resetGame, 5000);
+        }
+      }, [gameOver, validationComplete, gptScore]); // Depend on score and gptScore to ensure they are updated
 
+
+  // You can call validateAllPlayerWords at the end of the game or player's turn
+  /*useEffect(() => {
+  if (gameOver || !isPlayerTurn) {
+    validateAllPlayerWords();
+  }
+  }, [gameOver, isPlayerTurn]);
+*/
 
 
   const resetGame = () => {
@@ -171,6 +194,7 @@ const App = () => {
     setVerifiedGPTScores([]);
     setScoreComparisonModalVisible(false);
     setTurnAnnounceModalVisible(true);
+    setValidationComplete(false)
   } ;
 
   const fetchWords = async (verifyWords) => {
@@ -238,31 +262,47 @@ const App = () => {
   };
 
   const handlePressLetter = (letter) => {
-    setCurrentWord(prev => prev + letter);
-    //setIsValid(null); // Reset validation state on new input
+    const updatedWord = currentWordRef.current + letter;  // Update the ref synchronously
+    currentWordRef.current = updatedWord;
+    setCurrentWord(updatedWord)
   };
 
-  const handleSubmitWord = async () => {
+  const handleSubmitWord = () => {
     if (currentWord.length > 1) {
-    try {
-      const response = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${currentWord.toLowerCase()}`);
-      if (response.data && response.status === 200) {
-        setIsValid(true);
-        //Alert.alert("Correct", "This is a valid word!");
-        setScore(score + 1);
-        setPlayerWords([...PlayerWords, currentWord]);
-      }
-    } catch (error) {
-      setIsValid(false);
-      //Alert.alert("Incorrect", "This is not a valid word.");
+        console.log("Submitted Word:", currentWord);
+        // Handle the submitted word, e.g., adding to a list
+        setPlayerWords(prevWords => [...prevWords, currentWord.toLowerCase()]);
+        setCurrentWord('');  // Reset current word state
+        currentWordRef.current = ''; // Reset the ref
+    } else {
+        console.log("Word is too short");
     }
-  } else {
-    setIsValid(false);
-    console.log("Word is too short");
-  }
-    setTimeout(() => setIsValid(null), 2000);
-    setCurrentWord('');
   };
+
+  const validateAllPlayerWords = async () => {
+    const results = await Promise.all(
+      PlayerWords.map(async (word) => {
+        try {
+          const response = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+          if (response.data && response.data.length >0) {
+            return { word, isValid: true };
+          }
+          return { word, isValid: false }; // No entries means the word is not valid
+        } catch (error) {
+          return { word, isValid: false };
+        }
+      })
+    );
+
+   // Process the validation results here, e.g., update scores, show alerts, etc.
+  results.forEach(result => {
+    if (result.isValid) {
+      setScore(prevScore => prevScore + 1); // Increment score if the word is valid
+    } else {
+      console.log(`${result.word} is not a valid word.`);
+    }
+  });
+};
 
   const handleWordPress = (word) => {
     // Save the word to the list of saved words
