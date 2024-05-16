@@ -2,20 +2,23 @@
 import Constants from 'expo-constants';
 import WordCard from './WordCard'; // Adjust the path as necessary
 import FavoriteWordsModal from './FavoriteWordsModal';
-
+import _ from 'lodash';  // To import the entire lodash library
+import { throttle } from 'lodash';  // To import only the throttle function
 
 
 import React, { useRef, useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image, Alert, Dimensions, ImageBackground } from 'react-native';
+import { Pressable, StyleSheet, View, Text, TouchableOpacity, Image, Alert, Dimensions, ImageBackground } from 'react-native';
 import axios, { all } from 'axios';
 import LottieView from 'lottie-react-native';
 //import * as Animatable from 'react-native-animatable';
-import aiWinsAnimation from './aiwins.json';
-import humanWinsAnimation from './humanwins.json';
+import aiWinsAnimation from './aiwins1.json';
+import humanWinsAnimation from './humanwins1.json';
 import sendIcon from './assets/send.png';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { Modal } from 'react-native';
+
+import sendLettersToGPT from './api';
 
 // Import icons for validation
 const checkIcon = require('./assets/check.png');
@@ -137,7 +140,8 @@ const App = () => {
         setIsPlayerTurn(false);
         setShowSubmit(false);
         console.log("Player Words", PlayerWords);
-        sendLettersToGPT();
+        //sendLettersToGPT();
+        handleSendLetters()
         setTurnAnnounceModalVisible(true);
       }}, [timeLeft]);
 
@@ -244,7 +248,7 @@ const App = () => {
   setLetters(randomLetters);
   };
 
-  const sendLettersToGPT = async () => {
+  /*const sendLettersToGPT = async () => {
     try {
       const response = await axios.post(`${apiUrl}/generate-word`, { letters });
       if (response.data && response.data.word) {
@@ -266,12 +270,17 @@ const App = () => {
       setServerWordResponse("Error: " + error.message);
     }
   };
+  */
+  const handleSendLetters = () => {
+    sendLettersToGPT(apiUrl, letters, setServerWordResponse, setAllWords);
+};
 
-  const handlePressLetter = (letter) => {
+
+  const handlePressLetter = throttle((letter) => {
     const updatedWord = currentWordRef.current + letter;  // Update the ref synchronously
     currentWordRef.current = updatedWord;
-    setCurrentWord(updatedWord)
-  };
+    setCurrentWord(updatedWord);
+  }, 100);
 
   const handleSubmitWord = () => {
     if (currentWord.length > 1) {
@@ -378,9 +387,14 @@ const App = () => {
 
 const LetterTile = ({ letter, onPress }) => {
   return (
-    <TouchableOpacity style={styles.letterTile} onPress={() => onPress(letter)}>
-      <Text style={styles.letterText}>{letter}</Text>
-    </TouchableOpacity>
+    <Pressable onPress={() => onPress(letter)} style={({ pressed }) => [
+      styles.letterTile,
+      { backgroundColor: pressed ? '#dddddd' : 'transparent' }  // Change background color on press
+    ]}>
+      <View>
+      <Image source={images[letter]} style={styles.letterTile} />
+      </View>
+    </Pressable>
   );
 };
 
@@ -419,7 +433,7 @@ const TurnAnnouncementModal = () => {
 
   return (
     <ImageBackground
-      source={require('./assets/game-bg.jpg')}  // Ensure you have a thematic background image
+      source={require('./assets/game-bg1.jpg')}  // Ensure you have a thematic background image
       style={styles.container}
       resizeMode="cover"
     >
@@ -438,7 +452,7 @@ const TurnAnnouncementModal = () => {
       )}
       </View>
       {!gameOver && (
-      <View style={styles.gamePlayArea}>
+      <View style={styles.wordCardContainer}>
       {PlayerWords.map((word, index) => (
         <WordCard
           key={index}
@@ -536,13 +550,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   letterTile: {
-    width: '25%',  // Adjust size based on your layout preference
-    aspectRatio: 1,  // Keeps tile square
+    padding: 10,  // Increase padding
+    margin: 5,
     justifyContent: 'center',
     alignItems: 'center',
-    margin: 2,
-    backgroundColor: '#f0f0f0',  // Tile background color
-    borderRadius: 10,
+    minWidth: 50,  // Minimum width
+    minHeight: 50,  // Minimum height
+    backgroundColor: 'transparent',
   },
   letterText: {
     fontSize: 22,
@@ -561,9 +575,13 @@ const styles = StyleSheet.create({
     margin: 10,
   },
   submitButton: {
-    backgroundColor: '#aff0fe',
-    padding: 10,
-    borderRadius: 5,
+    padding: 10,  // Increase padding
+    margin: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 50,  // Minimum width
+    minHeight: 50,  // Minimum height
+    backgroundColor: 'transparent',
   },
   submitButtonText: {
     color: 'white',
