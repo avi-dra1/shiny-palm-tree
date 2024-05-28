@@ -82,6 +82,31 @@ export const TurnAnnouncementModal = ({ turnAnnounceModalVisible, setTurnAnnounc
     );
 };
 
+export const FullScreenAnimationModal = ({ visible, setVisible, winner }) => {
+    const animationSource = winner === 'GPT' ? require('./aiwins1.json') : require('./humanwins1.json');
+
+    return (
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={visible}
+            onRequestClose={() => setVisible(false)}
+        >
+            <View style={styles.centeredView}>
+                <View style={styles.modalView}>
+                    <LottieView
+                        source={animationSource}
+                        autoPlay
+                        loop={false}
+                        onAnimationFinish={() => setVisible(false)}
+                        style={styles.lottieFullScreenAnimation}
+                    />
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
 const styles = StyleSheet.create({
     CentralAnimationContainer: {
         position: 'absolute',
@@ -106,7 +131,7 @@ const styles = StyleSheet.create({
     },
     modalView: {
         margin: 20,
-        backgroundColor: 'white',
+        backgroundColor: 'black',
         borderRadius: 20,
         padding: 35,
         alignItems: 'center',
@@ -121,7 +146,7 @@ const styles = StyleSheet.create({
     },
     modalText: {
         fontSize: 16,
-        color: '#333',
+        color: 'white',
         padding: 5,
     },
     wordCard: {
