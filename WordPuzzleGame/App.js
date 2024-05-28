@@ -19,6 +19,9 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { Modal } from 'react-native';
 
 import sendLettersToGPT from './api';
+import { handlePressLetter, handleSubmitWord } from './wordHandlers'; // Import the functions
+import { validateAllPlayerWords } from './validateWords';
+import { CentralAnimation, ScoreComparisonModal, TurnAnnouncementModal } from './animations'; // Import the animation components
 
 // Import icons for validation
 const checkIcon = require('./assets/check.png');
@@ -152,7 +155,7 @@ const App = () => {
       setGptScore(allWords.length);
       //validateAllPlayerWords();
       if (!playerWordsChecked) {
-        validateAllPlayerWords().then(() => {
+        validateAllPlayerWords(PlayerWords, setScore, setPlayerWordsChecked).then(() => {
           console.log("Validation complete");
           // This will now wait until validation (and thus scoring) is complete
           setValidationComplete(true)
@@ -172,16 +175,6 @@ const App = () => {
         }
       }, [timeLeft]);
       
-      // Separate useEffect to handle end-of-game logic once all updates are processed
-      /*useEffect(() => {
-        if (gameOver && validationComplete) {
-          // Now check the updated scores and determine the winner
-          setWinner(gptScore > score ? 'GPT' : 'Player');
-          setScoreComparisonModalVisible(true);
-          setTimeout(resetGame, 5000);
-        }
-      }, [gameOver, validationComplete, gptScore]); // Depend on score and gptScore to ensure they are updated
-      */
 
   const resetGame = () => {
     // Reset the game state
@@ -211,8 +204,6 @@ const App = () => {
     try{
       const response = await axios.post(`${apiUrl}/find-unique-words`,verifyWords);
       if (response.data && response.data.uniqueWords) {
-        //console.log("Unique GPT Words", response.data.uniqueWords);
-        //console.log("Unique GPT Words Count", response.data.totalWords);
         setVerifiedGPTWords(response.data.uniqueWords);
         setVerifiedGPTScores(response.data.totalWords);
       }
@@ -248,142 +239,24 @@ const App = () => {
   setLetters(randomLetters);
   };
 
-  /*const sendLettersToGPT = async () => {
-    try {
-      const response = await axios.post(`${apiUrl}/generate-word`, { letters });
-      if (response.data && response.data.word) {
-        setServerWordResponse(response.data.word);
-        //check number of words
-
-        console.log("Server Response", response.data.word);
-
-        const newWords = response.data.word;
-        setAllWords(allWords => [...allWords, ...newWords]);
-        }
-
-      else {
-        Alert.alert("Error", "No response from server");
-      }
-    } catch (error) {
-      console.error('Error in:', error);
-      Alert.alert("Error", error.message);
-      setServerWordResponse("Error: " + error.message);
-    }
-  };
-  */
-  const handleSendLetters = () => {
+ 
+const handleSendLetters = () => {
     sendLettersToGPT(apiUrl, letters, setServerWordResponse, setAllWords);
 };
 
 
-  const handlePressLetter = throttle((letter) => {
-    const updatedWord = currentWordRef.current + letter;  // Update the ref synchronously
-    currentWordRef.current = updatedWord;
-    setCurrentWord(updatedWord);
-  }, 100);
+const onPressLetter = handlePressLetter(currentWordRef, setCurrentWord);
+const onSubmitWord = handleSubmitWord(currentWord, setCurrentWord, currentWordRef, setPlayerWords);
 
-  const handleSubmitWord = () => {
-    if (currentWord.length > 1) {
-        console.log("Submitted Word:", currentWord);
-        // Handle the submitted word, e.g., adding to a list
-        setPlayerWords(prevWords => [...prevWords, currentWord.toLowerCase()]);
-        setCurrentWord('');  // Reset current word state
-        currentWordRef.current = ''; // Reset the ref
-    } else {
-        console.log("Word is too short");
-    }
-  };
-
-  const validateAllPlayerWords = async () => {
-    const results = await Promise.all(
-      PlayerWords.map(async (word) => {
-        try {
-          const response = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-          if (response.data && response.data.length >0) {
-            return { word, isValid: true };
-          }
-          return { word, isValid: false }; // No entries means the word is not valid
-        } catch (error) {
-          return { word, isValid: false };
-        }
-      })
-    );
-
-   // Process the validation results here, e.g., update scores, show alerts, etc.
-  let newScore = 0;
-  results.forEach(result => {
-    if (result.isValid) {
-      newScore += 1; // Increment score if the word is valid
-    } else {
-      console.log(`${result.word} is not a valid word.`);
-    }
-  });
-  setScore(prevScore => prevScore + newScore);
-  setPlayerWordsChecked(true);
-};
 
   const handleWordPress = (word) => {
     // Save the word to the list of saved words
     setSavedWords(prev => ({ ...prev, [word]: true }));
-    //Alert.alert("Word Saved", "This word has been saved!");
     setAnimationData(require('./save-animation.json'));
     setModalVisible(true);
   };
 
-  const CentralAnimation = ({ data }) => {
-    if (!data) return null;
-  
-    return (
-      <View style={styles.CentralAnimationContainer}>
-        <LottieView
-          source={data}
-          autoPlay
-          loop={false}
-          onAnimationFinish={() => setAnimationData(null)}
-          style={styles.lottieFullScreenAnimation}
-        />
-      </View>
-    );
-  };
 
-  const ScoreComparisonModal = () => {
-    useEffect(() => {
-      const timeout = setTimeout(() => {
-        setScoreComparisonModalVisible(false);
-        //setWinnerModalVisible // This will trigger the winner announcement modal after 3 seconds.
-      }, 3000);
-  
-      return () => clearTimeout(timeout);
-    }, []); 
-
-    return (
-      <Modal
-      animationType="slide"
-      transparent={true}
-      visible={scoreComparisonModalVisible}
-      onRequestClose={() => setScoreComparisonModalVisible(false)}
-    >
-      <View style={styles.bottomView}>
-        <View style={styles.modalView}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
-            <View style={{ flex: 1, alignItems: 'center' }}>
-              <Text style={styles.modalText}>Player Score: {score}</Text>
-              {PlayerWords.map((word, index) => (
-                <Text key={index} style={styles.wordCard}>{word}</Text>
-              ))}
-            </View>
-            <View style={{ flex: 1, alignItems: 'center' }}>
-              <Text style={styles.modalText}>GPT Score: {gptScore}</Text>
-              {verifiedGPTWords.map((word, index) => (
-                <Text key={index} style={styles.wordCard}>{word}</Text>
-              ))}
-            </View>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-};
 
 const LetterTile = ({ letter, onPress }) => {
   return (
@@ -397,31 +270,6 @@ const LetterTile = ({ letter, onPress }) => {
     </Pressable>
   );
 };
-
-const TurnAnnouncementModal = () => {
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setTurnAnnounceModalVisible(false);
-    }, 300);
-
-    return () => clearTimeout(timeout);
-  }, []); 
-
-  return (
-    <Modal
-    animationType="slide"
-    transparent={true}
-    visible={turnAnnounceModalVisible}
-    onRequestClose={() => setTurnAnnounceModalVisible(false)}
-  >
-    <View style={styles.centeredView}>
-      <View style={styles.modalView}>
-        <Text style={styles.modalText}>{isPlayerTurn ? 'Your Turn!' : 'GPT Turn'}</Text>
-      </View>
-    </View>
-  </Modal>
-);
-}
 
 // Modify your render method to include this component in a grid
 <View style={styles.lettersContainer}>
@@ -438,15 +286,19 @@ const TurnAnnouncementModal = () => {
       resizeMode="cover"
     >
     <Text style={styles.timer}>{timeLeft}seconds</Text>
-    <TurnAnnouncementModal />
+    <TurnAnnouncementModal
+      turnAnnounceModalVisible={turnAnnounceModalVisible}
+      setTurnAnnounceModalVisible={setTurnAnnounceModalVisible}
+      isPlayerTurn={isPlayerTurn}
+    />
     <View style={styles.gamePlayArea}>
       <Text style={styles.score}>Your Score: {score}</Text>
       <View style={styles.lettersContainer}>
         {letters.map((letter, index) => (
-          <LetterTile key={index} letter={letter} onPress={handlePressLetter} />
+          <LetterTile key={index} letter={letter} onPress={onPressLetter} />
         ))}
       {isPlayerTurn && showSubmit && (
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmitWord}>
+        <TouchableOpacity style={styles.submitButton} onPress={onSubmitWord}>
          <Icon name="send" size={72} color="#FFFFFF" style={styles.sendIcon} />
         </TouchableOpacity>
       )}
@@ -464,7 +316,14 @@ const TurnAnnouncementModal = () => {
       ))}
       </View>
       )}
-      <ScoreComparisonModal/>
+      <ScoreComparisonModal
+        scoreComparisonModalVisible={scoreComparisonModalVisible}
+        setScoreComparisonModalVisible={setScoreComparisonModalVisible}
+        score={score}
+        PlayerWords={PlayerWords}
+        gptScore={gptScore}
+        verifiedGPTWords={verifiedGPTWords}
+      />
       {!isPlayerTurn && (
         <Text style={styles.score}>GPT Score: {gptScore}</Text>
       )}
