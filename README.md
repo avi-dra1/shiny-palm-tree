@@ -1,6 +1,6 @@
 # Turn-Based Word Puzzle Game
 
-![Game Logo](PuzzleGame.PNG)
+![Game Logo](videos/PuzzleGame.png)
 
 ## Overview
 
@@ -14,13 +14,13 @@ In this game, you will be presented with a grid of letters. Your task is to crea
 
 ### Player's Turn
 
-![Player's Turn](PuzzleGame.PNG)
+![Player's Turn](videos/PuzzleGame.png)
 
 During your turn, you have 28 seconds to form words using the given letters. The current score and time left are displayed at the top.
 
 ### GPT's Turn
 
-![GPT's Turn](TurnGPT.PNG)
+![GPT's Turn](videos/TurnGPT.png)
 
 After your turn, GPT gets 2 seconds to form its words. The scores are updated accordingly.
 
