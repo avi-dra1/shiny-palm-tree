@@ -21,7 +21,7 @@ import { Modal } from 'react-native';
 import sendLettersToGPT from './api';
 import { handlePressLetter, handleSubmitWord } from './wordHandlers'; // Import the functions
 import { validateAllPlayerWords } from './validateWords';
-import { CentralAnimation, ScoreComparisonModal, TurnAnnouncementModal } from './animations'; // Import the animation components
+import { CentralAnimation, ScoreComparisonModal, TurnAnnouncementModal, FullScreenAnimationModal } from './animations'; // Import the animation components
 
 // Import icons for validation
 const checkIcon = require('./assets/check.png');
@@ -117,6 +117,8 @@ const App = () => {
 
   const [playerWordsChecked, setPlayerWordsChecked] = useState(false);
 
+  const [animationVisible, setAnimationVisible] = useState(false);
+
   useEffect(() => {
     
     //implement timer here
@@ -136,7 +138,11 @@ const App = () => {
   useEffect(() => {
     if (timeLeft === 30) {
       generateRandomLetters();
-    }},[timeLeft]);
+    }
+    else if (timeLeft < 30){
+      setTurnAnnounceModalVisible(false)
+    }
+    },[timeLeft]);
   
   useEffect(() => {
    if (timeLeft === 10) {
@@ -153,6 +159,7 @@ const App = () => {
       setIsPlayerTurn(false);
       setShowSubmit(false);
       setGptScore(allWords.length);
+      setTurnAnnounceModalVisible(false)
       //validateAllPlayerWords();
       if (!playerWordsChecked) {
         validateAllPlayerWords(PlayerWords, setScore, setPlayerWordsChecked).then(() => {
@@ -171,6 +178,7 @@ const App = () => {
           console.log("Verified GPT Score", verifiedGPTScores);
           setWinner(gptScore > score ? 'GPT' : 'Player');
           setScoreComparisonModalVisible(true);
+          setAnimationVisible(true);
           setTimeout(resetGame, 5000);
         }
       }, [timeLeft]);
@@ -198,6 +206,7 @@ const App = () => {
     setPlayerWordsChecked(false);
     //reset the ref
     currentWordRef.current = '';
+    setAnimationVisible(false);
   } ;
 
   const fetchWords = async (verifyWords) => {
@@ -352,35 +361,23 @@ const LetterTile = ({ letter, onPress }) => {
       {winner} wins! {winner === 'GPT' ? 'Better luck next time!' : 'Congratulations!'} 
     </Text>
     )}
-    {gameOver && !isPlayerTurn && (
-    <View style={styles.fullScreen}>    
-    <View style={styles.centeredView}>
-     <View style={styles.modalView}>
-      <LottieView
-      source={winner === 'GPT' ? aiWinsAnimation : humanWinsAnimation}
-      autoPlay
-      loop={false}
-      onAnimationFinish={() => {
-        setAnimationData(null);
-        setModalVisible(false); // Hide the modal when the animation is done
-      }}
-      style={styles.lottieFullScreenAnimation}
-    />
-    </View>
-    </View>
-    </View>
-    )}
+    {gameOver && (
+        <FullScreenAnimationModal
+          visible={animationVisible}
+          setVisible={setAnimationVisible}
+          winner={winner}
+        />
+      )}
      <View style={styles.wordCardContainer}>
       <TouchableOpacity style={styles.saveIcon} onPress={toggleFavoritesModal}>
         <Icon name="star" size={60} color="#ffd700" />
       </TouchableOpacity>
       <FavoriteWordsModal
         isVisible={isFavoritesModalVisible}
-        onClose={toggleFavoritesModal}
+        winner={winner}
       />
     </View>
     </View>
-
     </ImageBackground>
   );
 };
@@ -520,7 +517,7 @@ const styles = StyleSheet.create({
   },
   modalView: {
     margin: 20,
-    backgroundColor: 'white',
+    backgroundColor: 'black',
     borderRadius: 20,
     padding: 35,
     alignItems: 'center',
